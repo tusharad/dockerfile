@@ -9,7 +9,7 @@ license: MIT
 github: creichert/dockerfile
 
 dependencies:
-  - base == 4.*
+  - base >= 4.7 && < 5
 
 library:
   exposed-modules:
