@@ -10,6 +10,7 @@ github: creichert/dockerfile
 
 dependencies:
   - base >= 4.7 && < 5
+  - mtl
 
 library:
   exposed-modules:

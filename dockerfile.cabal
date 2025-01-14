@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fa0c380f97204117120fc858c2f6b6e6d9bd988b86a46f2fd6cf7ea26617e841
+-- hash: 679e2c705d90f7f5b1b385f37d4d4fc5a9a85aa4b4d4e07739635707d2888819
 
 name:           dockerfile
 version:        0.2.0
@@ -30,6 +30,7 @@ library
       Control.Monad.Writer
   build-depends:
       base >=4.7 && <5
+    , mtl
   default-language: Haskell2010
 
 test-suite spec
@@ -44,4 +45,5 @@ test-suite spec
       base >=4.7 && <5
     , dockerfile
     , hspec
+    , mtl
   default-language: Haskell2010

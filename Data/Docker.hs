@@ -50,7 +50,7 @@ module Data.Docker
        , shell
        ) where
 
-import Control.Monad.Writer
+import Control.Monad.Writer.Lazy
 
 
 -- | A 'Dockerfile' is represented as a list of instructions.
