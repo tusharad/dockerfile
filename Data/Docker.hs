@@ -77,7 +77,11 @@ type ScriptFile = FilePath
 type Param      = String
 type ImageName  = String
 type As         = String
+data Protocol   = TCP | UDP
 
+instance Show Protocol where
+  show TCP = "tcp"
+  show UDP = "udp"
 
 -- | Dockerfile instruction set
 --
@@ -91,8 +95,9 @@ data Instruction
   | Cmd [ ScriptFile ]
   | Label [(String, String)]
   | Maintainer String
-  | Expose Int
+  | Expose Int (Maybe Protocol)
   | Env String String
+  | Envs [(String, String)]
   | Add [FilePath] FilePath [AddOpt]
   | AddWithWhiteSpaces [FilePath] FilePath [AddOpt]
   | Copy [FilePath] FilePath [CopyOpt]
@@ -114,8 +119,9 @@ prettyCmd = \case
     Cmd cmds                       -> "CMD " ++ show cmds
     Label kvs                      -> "LABEL " ++ unwords (fmap (\(k,v) -> show k ++ "=" ++ show v) kvs)
     Maintainer m                   -> "MAINTAINER " ++ m
-    Expose p                       -> "EXPOSE " ++ show p
+    Expose p mbProtocol            -> "EXPOSE " ++ show p ++ maybe "" (\x -> "/" ++ show x) mbProtocol
     Env k v                        -> "ENV " ++ k ++ " " ++ v
+    Envs kvs                       -> "ENV " ++ unwords (fmap (\(k,v) -> show k ++ "=" ++ show v) kvs)
     Add s d opts                   -> "ADD " ++ (if null opts then "" else renderOpts opts ++ " ")
                                              ++ unwords s
                                              ++ " "
@@ -142,12 +148,20 @@ class DockerOpt a where
 
 data CopyOpt = CopyOptFrom String
              | CopyOptChown [String]
+             | CopyOptChmod String
+             | CopyOptLink
+             | CopyOptParents 
+             | CopyOptExclude FilePath
              deriving Show
 
 instance DockerOpt CopyOpt where
     renderDockerOpt = \case
         CopyOptFrom n       -> "--from=" ++ n
         CopyOptChown chowns -> unwords (fmap ("--chown=" ++) chowns)
+        CopyOptChmod chmod -> "--chmod=" ++ chmod
+        CopyOptLink -> "--link"
+        CopyOptExclude filePath -> "--exclude=" ++ filePath
+        CopyOptParents -> "--parents"
 
 -- | The --chown and --chmod features are only supported on Dockerfiles used to build Linux containers
 data AddOpt = AddOptChown [String]
@@ -190,11 +204,14 @@ label kvs = tell [ Label kvs ]
 maintainer :: String -> Docker ()
 maintainer m = tell [ Maintainer m ]
 
-expose :: Int -> Docker ()
-expose p = tell [ Expose p ]
+expose :: Int -> Maybe Protocol -> Docker ()
+expose p mbProtocol = tell [ Expose p mbProtocol]
 
 env :: String -> String -> Docker ()
 env k v = tell [ Env k v ]
+
+envs :: [(String, String)] -> Docker ()
+envs lst = tell [Envs lst]
 
 add :: [FilePath] -> FilePath -> [AddOpt] -> Docker ()
 add k v mbOpts = tell [ Add k v mbOpts ]

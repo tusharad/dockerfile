@@ -21,7 +21,7 @@ main = hspec $ do
           , ("CMD exec form", cmd ["bash"], "CMD [\"bash\"]")
           , ("LABEL exec form", label [("version","v1.0")], "LABEL \"version\"=\"v1.0\"")
           , ("MAINTAINER", maintainer "Chris <chris@rbros.com>" , "MAINTAINER Chris <chris@rbros.com>")
-          , ("EXPOSE", expose 3000, "EXPOSE 3000")
+          , ("EXPOSE", expose 3000 Nothing, "EXPOSE 3000")
           , ("ENV", env "DEBIAN_FRONTEND" "noninteractive" , "ENV DEBIAN_FRONTEND noninteractive")
           , ("ADD", add ["package.yaml"] "/" [], "ADD package.yaml /")
           , ("ADD with owenership flags", add ["package.yaml"] "/" [AddOptChmod "644", AddOptChown ["cr:cr"]]
