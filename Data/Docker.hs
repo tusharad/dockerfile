@@ -28,7 +28,7 @@ module Data.Docker
 
          -- * Docker Instructions
        , from
-       , fromas
+       , fromAs
        , run
        , cmd
        , label
@@ -90,7 +90,7 @@ instance Show Protocol where
 -- `dockerfile` and similar functions.
 data Instruction
 
-  = From ImageName (Maybe As)
+  = From ImageName (Maybe As) (Maybe FromOpt)
   | Run Script  -- File [ScriptParam]
   | Cmd [ ScriptFile ]
   | Label [(String, String)]
@@ -114,7 +114,7 @@ data Instruction
 
 prettyCmd :: Instruction -> String
 prettyCmd = \case
-    From f mas                     -> "FROM " ++ f ++ maybe "" (" AS " ++) mas
+    From f mas mbPlatform          -> "FROM " ++ maybe "" renderDockerOpt mbPlatform ++ f ++ maybe "" (" AS " ++) mas
     Run scr                        -> "RUN " ++ scr
     Cmd cmds                       -> "CMD " ++ show cmds
     Label kvs                      -> "LABEL " ++ unwords (fmap (\(k,v) -> show k ++ "=" ++ show v) kvs)
@@ -181,16 +181,23 @@ instance DockerOpt AddOpt where
         AddOptLink -> "--link"
         AddOptExclude filePath -> "--exclude=" ++ filePath
 
+newtype FromOpt = FromOptPlatform String
+    deriving Show
+
+instance DockerOpt FromOpt where
+    renderDockerOpt (FromOptPlatform platform) = "--platform=" ++ platform
+
 renderOpts :: DockerOpt a => [a] -> String
 renderOpts = unwords . fmap renderDockerOpt
 
 -- * Instructions
 
-from :: String -> Docker ()
-from f = tell [ From f Nothing ]
+-- | Note: Image name should contain version as well
+from :: String -> Maybe FromOpt -> Docker ()
+from f mbPlatform = tell [ From f Nothing mbPlatform ]
 
-fromas :: String -> As -> Docker ()
-fromas f as = tell [ From f (Just as) ]
+fromAs :: String -> As -> Maybe FromOpt -> Docker ()
+fromAs f as mbPlatform = tell [ From f (Just as) mbPlatform]
 
 run :: Script -> Docker ()
 run scr = tell [ Run scr ]

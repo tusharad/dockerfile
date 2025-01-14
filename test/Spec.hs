@@ -15,8 +15,8 @@ main = hspec $ do
 
     let tsts :: [(String, Docker (), String)]
         tsts = [
-            ("FROM", from "ubuntu:trusty", "FROM ubuntu:trusty")
-          , ("FROM .. AS .. ", fromas "ubuntu:trusty" "base", "FROM ubuntu:trusty AS base")
+            ("FROM", from "ubuntu:trusty" Nothing, "FROM ubuntu:trusty")
+          , ("FROM .. AS .. ", fromAs "ubuntu:trusty" "base" Nothing, "FROM ubuntu:trusty AS base")
           , ("RUN shell form", run "echo hi", "RUN echo hi")
           , ("CMD exec form", cmd ["bash"], "CMD [\"bash\"]")
           , ("LABEL exec form", label [("version","v1.0")], "LABEL \"version\"=\"v1.0\"")
