@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 679e2c705d90f7f5b1b385f37d4d4fc5a9a85aa4b4d4e07739635707d2888819
+-- hash: 036575e334c24829ae4f449dfc2d227c195f95cdc82de3d8c60b2dc79df6aca8
 
 name:           dockerfile
 version:        0.2.0
@@ -27,7 +27,7 @@ library
   exposed-modules:
       Data.Docker
   other-modules:
-      Control.Monad.Writer
+      Paths_dockerfile
   build-depends:
       base >=4.7 && <5
     , mtl

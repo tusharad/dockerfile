@@ -21,6 +21,7 @@ module Data.Docker
        (
          -- * Types
          Docker
+       , AddOpt (..)
        , CopyOpt(..)
        , dockerfile
        , dockerfileWrite
@@ -35,7 +36,7 @@ module Data.Docker
        , expose
        , env
        , add
-       , addchown
+       , addWithWhiteSpaces
        , copy
        , copyfrom
        , copychown
@@ -93,6 +94,7 @@ data Instruction
   | Expose Int
   | Env String String
   | Add [FilePath] FilePath [AddOpt]
+  | AddWithWhiteSpaces [FilePath] FilePath [AddOpt]
   | Copy [FilePath] FilePath [CopyOpt]
   | Entrypoint String [Param]
   | Volume [FilePath]
@@ -118,6 +120,8 @@ prettyCmd = \case
                                              ++ unwords s
                                              ++ " "
                                              ++ d
+    AddWithWhiteSpaces s d opts    -> "ADD " ++ (if null opts then "" else renderOpts opts ++ " ")
+                                             ++ show (s ++ [d])
     Copy s d opts                  -> "COPY " ++ (if null opts then "" else renderOpts opts ++ " ")
                                               ++ unwords s
                                               ++ " "
@@ -145,14 +149,23 @@ instance DockerOpt CopyOpt where
         CopyOptFrom n       -> "--from=" ++ n
         CopyOptChown chowns -> unwords (fmap ("--chown=" ++) chowns)
 
-data AddOpt = AddOptFrom String
-            | AddOptChown [String]
+-- | The --chown and --chmod features are only supported on Dockerfiles used to build Linux containers
+data AddOpt = AddOptChown [String]
+            | AddOptChmod String
+            | AddOptKeepGitDir Bool
+            | AddOptChecksum String
+            | AddOptLink
+            | AddOptExclude FilePath
             deriving Show
 
 instance DockerOpt AddOpt where
     renderDockerOpt = \case
-        AddOptFrom n       -> "--from=" ++ n
         AddOptChown chowns -> unwords (fmap ("--chown=" ++) chowns)
+        AddOptChmod chmod -> "--chmod=" ++ chmod
+        AddOptKeepGitDir bool -> "--keep-git-dir=" ++ (if bool then "true" else "false")
+        AddOptChecksum sha -> "--checksum=" ++ sha
+        AddOptLink -> "--link"
+        AddOptExclude filePath -> "--exclude=" ++ filePath
 
 renderOpts :: DockerOpt a => [a] -> String
 renderOpts = unwords . fmap renderDockerOpt
@@ -183,11 +196,11 @@ expose p = tell [ Expose p ]
 env :: String -> String -> Docker ()
 env k v = tell [ Env k v ]
 
-add :: [FilePath] -> FilePath -> Docker ()
-add k v = tell [ Add k v [] ]
+add :: [FilePath] -> FilePath -> [AddOpt] -> Docker ()
+add k v mbOpts = tell [ Add k v mbOpts ]
 
-addchown :: [String] -> [FilePath] -> FilePath -> Docker ()
-addchown chowns k v = tell [ Add k v [AddOptChown chowns] ]
+addWithWhiteSpaces :: [FilePath] -> FilePath -> Docker ()
+addWithWhiteSpaces srcList dest = tell [AddWithWhiteSpaces srcList dest []]
 
 copy :: [FilePath] -> FilePath -> Docker ()
 copy s d = tell [ Copy s d [] ]

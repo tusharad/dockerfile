@@ -15,8 +15,6 @@ dependencies:
 library:
   exposed-modules:
     - Data.Docker
-  other-modules:
-    - Control.Monad.Writer
 
 tests:
   spec:

@@ -1,6 +1,5 @@
 
 import Control.Monad (forM_)
-import Data.Monoid   ((<>))
 import Test.Hspec
 
 import Data.Docker
@@ -24,8 +23,19 @@ main = hspec $ do
           , ("MAINTAINER", maintainer "Chris <chris@rbros.com>" , "MAINTAINER Chris <chris@rbros.com>")
           , ("EXPOSE", expose 3000, "EXPOSE 3000")
           , ("ENV", env "DEBIAN_FRONTEND" "noninteractive" , "ENV DEBIAN_FRONTEND noninteractive")
-          , ("ADD", add ["package.yaml"] "/", "ADD package.yaml /")
-          , ("ADD --chown", addchown ["cr:cr", "1"] ["./package.yaml"] "/", "ADD --chown=cr:cr --chown=1 ./package.yaml /")
+          , ("ADD", add ["package.yaml"] "/" [], "ADD package.yaml /")
+          , ("ADD with owenership flags", add ["package.yaml"] "/" [AddOptChmod "644", AddOptChown ["cr:cr"]]
+                                                    , "ADD --chmod=644 --chown=cr:cr package.yaml /")
+          , ("ADD with keep git dir flag", add ["package.yaml"] "/" [AddOptKeepGitDir True]
+                                                    , "ADD --keep-git-dir=true package.yaml /")
+          , ("ADD with exclude, link & checksum flag"
+                    , add ["package.yaml"] "/" [
+                                                AddOptExclude "./someFile.txt"
+                                              , AddOptLink 
+                                              , AddOptChecksum "sha256:15481119c43b3cafd48dd869a9b2945d1036d1dc68d"
+                                              ]
+              , "ADD --exclude=./someFile.txt --link --checksum=sha256:15481119c43b3cafd48dd869a9b2945d1036d1dc68d package.yaml /")
+          , ("ADD with white spaces", addWithWhiteSpaces ["hello world.txt"] "/app", "ADD [\"hello world.txt\",\"/app\"]")
           , ("COPY ", copy ["package.yaml"] "/", "COPY package.yaml /")
           , ("COPY --from", copyfrom "ci" ["file1.txt"] "/", "COPY --from=ci file1.txt /")
           , ("COPY --chown", copychown ["cr:cr", "1"] ["./package.yaml"] "/", "COPY --chown=cr:cr --chown=1 ./package.yaml /")
