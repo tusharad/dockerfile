@@ -38,6 +38,7 @@ module Data.Docker
        , maintainer
        , expose
        , env
+       , envs
        , add
        , addWithWhiteSpaces
        , copy
