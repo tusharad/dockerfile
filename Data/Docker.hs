@@ -25,6 +25,7 @@ module Data.Docker
        , CopyOpt(..)
        , FromOpt (..)
        , HealthCheckOpt (..)
+       , RunOpt (..)
        , dockerfile
        , dockerfileWrite
 
@@ -117,7 +118,7 @@ data Instruction
 prettyCmd :: Instruction -> String
 prettyCmd = \case
     From f mas mbPlatform          -> "FROM " ++ maybe "" renderDockerOpt mbPlatform ++ f ++ maybe "" (" AS " ++) mas
-    Run scr opts                   -> "RUN " ++ renderOpts opts  ++ scr
+    Run scr opts                   -> "RUN " ++ renderOpts opts ++ (if null opts then "" else " ") ++ scr
     Cmd cmds                       -> "CMD " ++ show cmds
     Label kvs                      -> "LABEL " ++ unwords (fmap (\(k,v) -> show k ++ "=" ++ show v) kvs)
     Maintainer m                   -> "MAINTAINER " ++ m
