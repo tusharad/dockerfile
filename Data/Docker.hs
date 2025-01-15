@@ -23,6 +23,8 @@ module Data.Docker
          Docker
        , AddOpt (..)
        , CopyOpt(..)
+       , FromOpt (..)
+       , HealthCheckOpt (..)
        , dockerfile
        , dockerfileWrite
 
@@ -108,7 +110,7 @@ data Instruction
   | Arg String (Maybe String)
   | OnBuild Instruction
   | StopSignal String
-  | HealthCheck (Maybe ([String], String))
+  | HealthCheck (Maybe ([HealthCheckOpt], String))
   | Shell
   deriving Show
 
@@ -139,7 +141,7 @@ prettyCmd = \case
     Arg name mval                  -> "ARG " ++ name ++ maybe "" ("=" ++) mval
     OnBuild _instr                 -> error "ONBUILD instruction is not currently supported."
     StopSignal sig                 -> "STOPSIGNAL " ++ sig
-    HealthCheck (Just (opts, c))   -> "HEALTHCHECK " ++ unwords opts ++ " CMD " ++ c
+    HealthCheck (Just (opts, c))   -> "HEALTHCHECK " ++ renderOpts opts ++ " CMD " ++ c
     HealthCheck Nothing            -> "HEALTHCHECK NONE"
     Shell                          -> error "SHELL instruction is not currently supported"
 
@@ -186,6 +188,21 @@ newtype FromOpt = FromOptPlatform String
 
 instance DockerOpt FromOpt where
     renderDockerOpt (FromOptPlatform platform) = "--platform=" ++ platform
+
+data HealthCheckOpt = HealthCheckOptInterval Int 
+                    | HealthCheckOptTimeout Int
+                    | HealthCheckOptStartPeriod Int
+                    | HealthCheckOptStartInterval Int
+                    | HealthCheckOptRetires Int
+    deriving Show
+
+instance DockerOpt HealthCheckOpt where
+    renderDockerOpt = \case
+        HealthCheckOptInterval duration -> "--interval=" ++ show duration
+        HealthCheckOptTimeout duration -> "--timeout=" ++ show duration
+        HealthCheckOptStartPeriod duration -> "--start-period=" ++ show duration
+        HealthCheckOptStartInterval duration -> "--start-interval=" ++ show duration
+        HealthCheckOptRetires duration -> "--retires=" ++ show duration
 
 renderOpts :: DockerOpt a => [a] -> String
 renderOpts = unwords . fmap renderDockerOpt
@@ -256,7 +273,7 @@ onbuild _ = error "ONBUILD instruction is not yet supported"
 stopsignal :: String -> Docker ()
 stopsignal c = tell [StopSignal c]
 
-healthcheck :: Maybe ([String], String) -> Docker ()
+healthcheck :: Maybe ([HealthCheckOpt], String) -> Docker ()
 healthcheck = \case
     Just (opts, cmd') -> tell [HealthCheck (Just (opts, cmd'))]
     Nothing           -> tell [HealthCheck Nothing]
