@@ -139,7 +139,11 @@ prettyCmd = \case
     User u                         -> "USER " ++ u
     WorkDir cwd                    -> "WORKDIR " ++ cwd
     Arg name mval                  -> "ARG " ++ name ++ maybe "" ("=" ++) mval
-    OnBuild _instr                 -> error "ONBUILD instruction is not currently supported."
+    OnBuild instr                 -> case instr of
+                                        (OnBuild _) -> error "OnBuild on OnBuild is not supported"
+                                        (From {}) -> error "From in OnBuild may not be supported"
+                                        (Maintainer {}) -> error "MAINTAINER in OnBuild may not be supoprted"
+                                        _ -> "ONBUILD " ++ prettyCmd instr
     StopSignal sig                 -> "STOPSIGNAL " ++ sig
     HealthCheck (Just (opts, c))   -> "HEALTHCHECK " ++ renderOpts opts ++ " CMD " ++ c
     HealthCheck Nothing            -> "HEALTHCHECK NONE"
@@ -189,20 +193,20 @@ newtype FromOpt = FromOptPlatform String
 instance DockerOpt FromOpt where
     renderDockerOpt (FromOptPlatform platform) = "--platform=" ++ platform
 
-data HealthCheckOpt = HealthCheckOptInterval Int 
-                    | HealthCheckOptTimeout Int
-                    | HealthCheckOptStartPeriod Int
-                    | HealthCheckOptStartInterval Int
+data HealthCheckOpt = HealthCheckOptInterval String
+                    | HealthCheckOptTimeout String
+                    | HealthCheckOptStartPeriod String
+                    | HealthCheckOptStartInterval String
                     | HealthCheckOptRetires Int
     deriving Show
 
 instance DockerOpt HealthCheckOpt where
     renderDockerOpt = \case
-        HealthCheckOptInterval duration -> "--interval=" ++ show duration
-        HealthCheckOptTimeout duration -> "--timeout=" ++ show duration
-        HealthCheckOptStartPeriod duration -> "--start-period=" ++ show duration
-        HealthCheckOptStartInterval duration -> "--start-interval=" ++ show duration
-        HealthCheckOptRetires duration -> "--retires=" ++ show duration
+        HealthCheckOptInterval duration -> "--interval=" ++ duration
+        HealthCheckOptTimeout duration -> "--timeout=" ++ duration
+        HealthCheckOptStartPeriod duration -> "--start-period=" ++ duration
+        HealthCheckOptStartInterval duration -> "--start-interval=" ++ duration
+        HealthCheckOptRetires retires -> "--retires=" ++ show retires
 
 renderOpts :: DockerOpt a => [a] -> String
 renderOpts = unwords . fmap renderDockerOpt
@@ -267,8 +271,8 @@ workdir cwd = tell [ WorkDir cwd ]
 arg :: String -> Maybe String -> Docker ()
 arg name val = tell [ Arg name val ]
 
-onbuild :: Instruction -> Docker ()
-onbuild _ = error "ONBUILD instruction is not yet supported"
+-- onbuild :: Instruction -> Docker ()
+-- onbuild _ = error "ONBUILD instruction is not yet supported"
 
 stopsignal :: String -> Docker ()
 stopsignal c = tell [StopSignal c]
@@ -280,3 +284,6 @@ healthcheck = \case
 
 shell :: String -> Docker ()
 shell = error "SHELL instruction is not yet supported"
+
+onbuild :: Docker () -> Docker ()
+onbuild instr = tell [OnBuild (head (execWriter instr))]

@@ -52,8 +52,8 @@ main = hspec $ do
           , ("STOPSIGNAL", stopsignal "9", "STOPSIGNAL 9")
 
           , ("HEALTHCHECK NONE", healthcheck Nothing, "HEALTHCHECK NONE")
-          , ("HEALTHCHECK", healthcheck (Just (["--interval=5m"], "curl -f http://localhost || exit 1")), "HEALTHCHECK --interval=5m CMD curl -f http://localhost || exit 1")
-
+          , ("HEALTHCHECK", healthcheck (Just ([HealthCheckOptInterval "5m"], "curl -f http://localhost || exit 1")), "HEALTHCHECK --interval=5m CMD curl -f http://localhost || exit 1")
+          , ("ONBUILD", onbuild (copy ["package.yaml"] "/"), "ONBUILD COPY package.yaml /")
           -- TODO "SHELL"
           -- TODO "ONBUILD"
           ]
