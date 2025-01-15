@@ -93,7 +93,7 @@ instance Show Protocol where
 data Instruction
 
   = From ImageName (Maybe As) (Maybe FromOpt)
-  | Run Script  -- File [ScriptParam]
+  | Run Script [RunOpt]  -- File [ScriptParam]
   | Cmd [ ScriptFile ]
   | Label [(String, String)]
   | Maintainer String
@@ -111,13 +111,13 @@ data Instruction
   | OnBuild Instruction
   | StopSignal String
   | HealthCheck (Maybe ([HealthCheckOpt], String))
-  | Shell
+  | Shell [String]
   deriving Show
 
 prettyCmd :: Instruction -> String
 prettyCmd = \case
     From f mas mbPlatform          -> "FROM " ++ maybe "" renderDockerOpt mbPlatform ++ f ++ maybe "" (" AS " ++) mas
-    Run scr                        -> "RUN " ++ scr
+    Run scr opts                   -> "RUN " ++ renderOpts opts  ++ scr
     Cmd cmds                       -> "CMD " ++ show cmds
     Label kvs                      -> "LABEL " ++ unwords (fmap (\(k,v) -> show k ++ "=" ++ show v) kvs)
     Maintainer m                   -> "MAINTAINER " ++ m
@@ -147,7 +147,7 @@ prettyCmd = \case
     StopSignal sig                 -> "STOPSIGNAL " ++ sig
     HealthCheck (Just (opts, c))   -> "HEALTHCHECK " ++ renderOpts opts ++ " CMD " ++ c
     HealthCheck Nothing            -> "HEALTHCHECK NONE"
-    Shell                          -> error "SHELL instruction is not currently supported"
+    Shell cmds                     -> "SHELL " ++ show cmds
 
 class DockerOpt a where
     renderDockerOpt :: a -> String
@@ -208,6 +208,17 @@ instance DockerOpt HealthCheckOpt where
         HealthCheckOptStartInterval duration -> "--start-interval=" ++ duration
         HealthCheckOptRetires retires -> "--retires=" ++ show retires
 
+data RunOpt = RunOptMount String
+            | RunOptNetwork String
+            | RunOptSecurity String
+    deriving Show
+
+instance DockerOpt RunOpt where
+    renderDockerOpt = \case
+        RunOptMount mount -> "--mount=" ++ mount
+        RunOptNetwork network -> "--network=" ++ network
+        RunOptSecurity sec -> "--security=" ++ sec
+
 renderOpts :: DockerOpt a => [a] -> String
 renderOpts = unwords . fmap renderDockerOpt
 
@@ -220,8 +231,8 @@ from f mbPlatform = tell [ From f Nothing mbPlatform ]
 fromAs :: String -> As -> Maybe FromOpt -> Docker ()
 fromAs f as mbPlatform = tell [ From f (Just as) mbPlatform]
 
-run :: Script -> Docker ()
-run scr = tell [ Run scr ]
+run :: Script -> [RunOpt] -> Docker ()
+run scr opts = tell [ Run scr opts]
 
 cmd :: [ScriptFile] -> Docker ()
 cmd cs = tell [ Cmd cs ]
@@ -271,9 +282,6 @@ workdir cwd = tell [ WorkDir cwd ]
 arg :: String -> Maybe String -> Docker ()
 arg name val = tell [ Arg name val ]
 
--- onbuild :: Instruction -> Docker ()
--- onbuild _ = error "ONBUILD instruction is not yet supported"
-
 stopsignal :: String -> Docker ()
 stopsignal c = tell [StopSignal c]
 
@@ -282,8 +290,8 @@ healthcheck = \case
     Just (opts, cmd') -> tell [HealthCheck (Just (opts, cmd'))]
     Nothing           -> tell [HealthCheck Nothing]
 
-shell :: String -> Docker ()
-shell = error "SHELL instruction is not yet supported"
+shell :: [String] -> Docker ()
+shell cmds = tell [Shell cmds]
 
 onbuild :: Docker () -> Docker ()
 onbuild instr = tell [OnBuild (head (execWriter instr))]
